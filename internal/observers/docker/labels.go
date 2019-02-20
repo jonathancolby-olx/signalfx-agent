@@ -10,7 +10,7 @@ import (
 
 var labelConfigRegexp = regexp.MustCompile(
 	`^agent.signalfx.com\.` +
-		`(?P<type>monitorType|config)` +
+		`(?P<type>monitorType|config|port)` +
 		`\.(?P<port>[\w]+)(?:-(?P<port_name>[\w]+))?` +
 		`(?:\.(?P<config_key>\w+))?$`)
 
@@ -19,13 +19,13 @@ type labelConfig struct {
 	Configuration map[string]interface{}
 }
 
-type contPort struct {
+type ContPort struct {
 	nat.Port
 	Name string
 }
 
-func getConfigLabels(labels map[string]string) map[contPort]*labelConfig {
-	portMap := map[contPort]*labelConfig{}
+func GetConfigLabels(labels map[string]string) map[ContPort]*labelConfig {
+	portMap := map[ContPort]*labelConfig{}
 
 	for k, v := range labels {
 		if !strings.HasPrefix(k, "agent.signalfx.com") {
@@ -44,7 +44,7 @@ func getConfigLabels(labels map[string]string) map[contPort]*labelConfig {
 			continue
 		}
 
-		portObj := contPort{
+		portObj := ContPort{
 			Port: natPort,
 			Name: groups["port_name"],
 		}

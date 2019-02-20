@@ -1,8 +1,6 @@
 package docker
 
 import (
-	"encoding/json"
-	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -12,24 +10,12 @@ import (
 	"github.com/signalfx/golib/sfxclient"
 )
 
-func convertStatsToMetrics(container *dtypes.ContainerJSON, cstats *dtypes.ContainerStats) ([]*datapoint.Datapoint, error) {
-	var parsed dtypes.StatsJSON
-	err := json.NewDecoder(cstats.Body).Decode(&parsed)
-	if err != nil {
-		// EOF means that there aren't any stats, perhaps because the container
-		// is gone.  Just return nothing and no error.
-		if err == io.EOF {
-			return nil, nil
-		}
-		return nil, err
-	}
-	cstats.Body.Close()
-
+func ConvertStatsToMetrics(container *dtypes.ContainerJSON, parsed *dtypes.StatsJSON) ([]*datapoint.Datapoint, error) {
 	var dps []*datapoint.Datapoint
-	dps = append(dps, convertBlkioStats(&parsed.BlkioStats)...)
-	dps = append(dps, convertCPUStats(&parsed.CPUStats, &parsed.PreCPUStats)...)
-	dps = append(dps, convertMemoryStats(&parsed.MemoryStats)...)
-	dps = append(dps, convertNetworkStats(&parsed.Networks)...)
+	dps = append(dps, ConvertBlkioStats(&parsed.BlkioStats)...)
+	dps = append(dps, ConvertCPUStats(&parsed.CPUStats, &parsed.PreCPUStats)...)
+	dps = append(dps, ConvertMemoryStats(&parsed.MemoryStats)...)
+	dps = append(dps, ConvertNetworkStats(&parsed.Networks)...)
 
 	now := time.Now()
 	for i := range dps {
@@ -53,7 +39,7 @@ func convertStatsToMetrics(container *dtypes.ContainerJSON, cstats *dtypes.Conta
 	return dps, nil
 }
 
-func convertBlkioStats(stats *dtypes.BlkioStats) []*datapoint.Datapoint {
+func ConvertBlkioStats(stats *dtypes.BlkioStats) []*datapoint.Datapoint {
 	var out []*datapoint.Datapoint
 
 	for k, v := range map[string][]dtypes.BlkioStatEntry{
@@ -77,7 +63,7 @@ func convertBlkioStats(stats *dtypes.BlkioStats) []*datapoint.Datapoint {
 	return out
 }
 
-func convertCPUStats(stats *dtypes.CPUStats, prior *dtypes.CPUStats) []*datapoint.Datapoint {
+func ConvertCPUStats(stats *dtypes.CPUStats, prior *dtypes.CPUStats) []*datapoint.Datapoint {
 	var out []*datapoint.Datapoint
 
 	out = append(out, []*datapoint.Datapoint{
@@ -100,14 +86,14 @@ func convertCPUStats(stats *dtypes.CPUStats, prior *dtypes.CPUStats) []*datapoin
 		sfxclient.Cumulative("cpu.throttling_data.throttled_time", nil, int64(stats.ThrottlingData.ThrottledTime)),
 	}...)
 
-	out = append(out, sfxclient.GaugeF("cpu.percent", nil, calculateCPUPercent(prior, stats)))
+	out = append(out, sfxclient.GaugeF("cpu.percent", nil, CalculateCPUPercent(prior, stats)))
 
 	return out
 }
 
 // Copied from
 // https://github.com/docker/cli/blob/dbd96badb6959c2b7070664aecbcf0f7c299c538/cli/command/container/stats_helpers.go
-func calculateCPUPercent(previous *dtypes.CPUStats, v *dtypes.CPUStats) float64 {
+func CalculateCPUPercent(previous *dtypes.CPUStats, v *dtypes.CPUStats) float64 {
 	var (
 		cpuPercent = 0.0
 		// calculate the change for the cpu usage of the container in between readings
@@ -126,7 +112,7 @@ func calculateCPUPercent(previous *dtypes.CPUStats, v *dtypes.CPUStats) float64 
 	return cpuPercent
 }
 
-func convertMemoryStats(stats *dtypes.MemoryStats) []*datapoint.Datapoint {
+func ConvertMemoryStats(stats *dtypes.MemoryStats) []*datapoint.Datapoint {
 	var out []*datapoint.Datapoint
 
 	out = append(out, []*datapoint.Datapoint{
@@ -145,7 +131,7 @@ func convertMemoryStats(stats *dtypes.MemoryStats) []*datapoint.Datapoint {
 	return out
 }
 
-func convertNetworkStats(stats *map[string]dtypes.NetworkStats) []*datapoint.Datapoint {
+func ConvertNetworkStats(stats *map[string]dtypes.NetworkStats) []*datapoint.Datapoint {
 	if stats == nil {
 		return nil
 	}
