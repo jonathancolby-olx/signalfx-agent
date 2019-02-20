@@ -3,10 +3,12 @@
 package docker
 
 import (
+	"encoding/json"
 	"context"
 	"strings"
 	"sync"
 	"time"
+	"io"
 
 	dtypes "github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
@@ -172,7 +174,21 @@ func (m *Monitor) fetchStats(container dockerContainer, labelMap map[string]stri
 		return
 	}
 
-	dps, err := convertStatsToMetrics(container.ContainerJSON, &stats)
+	var parsed dtypes.StatsJSON
+	err = json.NewDecoder(stats.Body).Decode(&parsed)
+	if err != nil {
+		cancel()
+		// EOF means that there aren't any stats, perhaps because the container
+		// is gone.  Just return nothing and no error.
+		if err == io.EOF {
+			return
+		}
+		logger.WithError(err).Errorf("Could not parse docker stats for container id %s", container.ID)
+		return
+	}
+	stats.Body.Close()
+
+	dps, err := ConvertStatsToMetrics(container.ContainerJSON, &parsed)
 	cancel()
 	if err != nil {
 		logger.WithError(err).Errorf("Could not convert docker stats for container id %s", container.ID)

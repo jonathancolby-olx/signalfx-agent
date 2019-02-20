@@ -1,0 +1,53 @@
+{
+    "executionRoleArn": null,
+    "containerDefinitions": [
+        {
+            "name": "redis",
+            "image": "redis:latest",
+            "essential": true,
+            "dockerLabels": {
+                "agent.signalfx.com.port.6379": "true",
+                "agent.signalfx.com.config.6379.intervalSeconds": "1"
+            }
+        },
+        {
+            "dnsSearchDomains": null,
+            "logConfiguration": null,
+            "entryPoint": [
+                "bash",
+                "-c"
+            ],
+            "portMappings": [],
+            "command": [
+                "curl --fail $CONFIG_URL > /etc/signalfx/agent.yaml && exec /bin/signalfx-agent"
+            ],
+            "linuxParameters": null,
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "ACCESS_TOKEN",
+                    "value": "MY_ACCESS_TOKEN"
+                },
+                {
+                    "name": "CONFIG_URL",
+                    "value": "https://raw.githubusercontent.com/signalfx/signalfx-agent/master/deployments/ecs/agent.yaml"
+                }
+            ],
+            "dockerLabels": {
+                "app": "signalfx-agent"
+            },
+            "privileged": null,
+            "name": "signalfx-agent",
+            "image": "quay.io/signalfx/signalfx-agent:4.0.0"
+        }
+    ],
+    "memory": "200",
+    "taskRoleArn": null,
+    "family": "signalfx-fargate",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": null,
+    "placementConstraints": []
+}
