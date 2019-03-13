@@ -39,7 +39,8 @@ type MonitorConfig struct {
 	// configurations will be considered. This setting can be useful for testing.
 	Solo bool `yaml:"solo" json:"solo"`
 	// A list of metric filters
-	MetricsToExclude []MetricFilter `yaml:"metricsToExclude" json:"metricsToExclude" default:"[]"`
+	MetricsToExclude    []MetricFilter `yaml:"metricsToExclude" json:"metricsToExclude" default:"[]"`
+	DatapointsToExclude []MetricFilter `yaml:"datapointsToExclude" json:"datapointsToExclude" default:"[]"`
 	// Some monitors pull metrics from services not running on the same host
 	// and should not get the host-specific dimensions set on them (e.g.
 	// `host`, `AWSUniqueId`, etc).  Setting this to `true` causes those
