@@ -32,6 +32,7 @@ monitors:
   - type: collectd/signalfx-metadata
   - type: host-metadata
   - type: collectd/vmem
+  - type: collectd/statsd
   - type: docker-container-stats
 
 metricsToExclude:
