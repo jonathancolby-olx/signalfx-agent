@@ -18,6 +18,7 @@ logging:
 # observers are what discover running services in the environment
 observers:
   - type: docker
+  - type: host
 
 monitors:
   - {"#from": "/etc/signalfx/monitors/*.yaml", flatten: true, optional: true}
@@ -33,7 +34,7 @@ monitors:
   - type: host-metadata
   - type: collectd/vmem
   - type: collectd/statsd
-    discoveryRule: private_port == 9125
+    discoveryRule: port == 9125
   - type: docker-container-stats
 
 metricsToExclude:
