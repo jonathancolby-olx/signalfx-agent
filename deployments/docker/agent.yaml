@@ -33,6 +33,7 @@ monitors:
   - type: host-metadata
   - type: collectd/vmem
   - type: collectd/statsd
+    discoveryRule: private_port == 9125
   - type: docker-container-stats
 
 metricsToExclude:
