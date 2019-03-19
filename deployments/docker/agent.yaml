@@ -33,7 +33,7 @@ monitors:
   - type: host-metadata
   - type: collectd/vmem
   - type: collectd/statsd
-    discoveryRule: port == 9125 || port == 8125
+    discoveryRule: container_image =~ "aws-appmesh-envoy" && private_port == 9125
   - type: docker-container-stats
 
 metricsToExclude:
