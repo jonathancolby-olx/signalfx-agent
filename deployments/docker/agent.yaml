@@ -25,7 +25,7 @@ monitors:
     listenAddress: "localhost"
     listenPort: 8125
   - type: telegraf/statsd
-    ServiceAddress: "127.0.0.1:8125"
+    serviceAddress: "127.0.0.1:8125"
 
 metricsToExclude:
   - {"#from": "/lib/whitelist.json", flatten: true}
