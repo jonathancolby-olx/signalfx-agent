@@ -21,17 +21,6 @@ observers:
 
 monitors:
   - {"#from": "/etc/signalfx/monitors/*.yaml", flatten: true, optional: true}
-  - type: collectd/cpu
-  - type: collectd/cpufreq
-  - type: collectd/df
-    hostFSPath: /hostfs
-  - type: collectd/disk
-  - type: collectd/interface
-  - type: collectd/load
-  - type: collectd/memory
-  - type: collectd/signalfx-metadata
-  - type: host-metadata
-  - type: collectd/vmem
   - type: collectd/statsd
     listenAddress: "localhost"
     listenPort: 8125
