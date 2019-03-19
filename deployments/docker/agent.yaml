@@ -13,12 +13,11 @@ sysPath: /hostfs/sys
 
 logging:
   # Valid values are 'debug', 'info', 'warning', and 'error'
-  level: info
+  level: debug
 
 # observers are what discover running services in the environment
 observers:
   - type: docker
-  - type: host
 
 monitors:
   - {"#from": "/etc/signalfx/monitors/*.yaml", flatten: true, optional: true}
