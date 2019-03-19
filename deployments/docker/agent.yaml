@@ -33,9 +33,8 @@ monitors:
   - type: host-metadata
   - type: collectd/vmem
   - type: collectd/statsd
-    listenPort: 9125
-    discoveryRule: container_image =~ "aws-appmesh-envoy" && private_port == 9125
-  - type: docker-container-stats
+    listenAddress: "localhost"
+    listenPort: 8125
 
 metricsToExclude:
   - {"#from": "/lib/whitelist.json", flatten: true}
