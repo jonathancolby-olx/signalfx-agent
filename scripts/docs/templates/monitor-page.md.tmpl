@@ -38,17 +38,21 @@ Monitor Type: `{{.monitorType}}`
 This monitor has no configuration options.
 {{ end }}
 
-{{with .metrics -}}
 ## Metrics
 
-The following table lists the metrics available for this monitor. Metrics that are not marked as Custom are standard metrics and are monitored by default.
+The following table lists the metrics available for this monitor. Metrics that are Included are standard metrics and are monitored by default.
 
-| Name | Type | Custom | Description |
-| ---  | ---  | ---    | ---         |
-{{ range . -}}
-| `{{.name}}`{{if has . "alias"}}<br>_or_ `{{.alias}}`{{end}} | {{.type}} | {{if and (not (index (ds "monitor").whitelisted_metrics .name)) (not .included)}}X{{end}} | {{.description | strings.TrimSpace}} |
+{{$metrics := .metrics}}
+{{- range $group := .groups -}}
+### {{$group.description}} (`{{$group.name}}`)
+| Name | Type | Included | Description |
+| ---  | ---  | ---      | ---         |
+{{ range $metric := $metrics }}
+{{- if eq $group.name $metric.group -}}
+| `{{.name}}`{{if has . "alias"}}<br>_or_ `{{.alias}}`{{end}} | {{.type}} | {{if .included}}✔{{end}} | {{.description | strings.TrimSpace}} |
+{{ end -}}
 {{end}}
-{{end -}}
+{{end}}
 
 {{if and .metrics (not .sendAll)}}
 To specify custom metrics you want to monitor, add a `metricsToInclude` filter
@@ -66,7 +70,7 @@ required for gathering additional metrics.
 metricsToInclude:
   - metricNames:
 {{- range .metrics -}}
-{{if and (not (index (ds "monitor").whitelisted_metrics .name)) (not .included)}}
+{{if not .included}}
     - {{ .name }}
 {{- end -}}
 {{end}}

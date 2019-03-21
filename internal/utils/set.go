@@ -35,3 +35,8 @@ func StringSetToSlice(set map[string]bool) []string {
 	}
 	return out
 }
+
+// MakeSet
+func MakeSet(strings ...string) map[string]bool {
+	return StringSliceToMap(strings)
+}

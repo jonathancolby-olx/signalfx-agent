@@ -33,6 +33,7 @@ require (
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d
 	github.com/creasty/defaults v0.0.0-00010101000000-000000000000
+	github.com/cweill/gotests v1.5.2 // indirect
 	github.com/dancannon/gorethink v4.0.0+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20190121005146-b04fd42d9952 // indirect

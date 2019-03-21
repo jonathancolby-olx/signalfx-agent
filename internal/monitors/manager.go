@@ -314,26 +314,35 @@ func (mm *MonitorManager) findConfigForMonitorAndRun(endpoint services.Endpoint)
 // endpoint may be nil for static monitors
 func (mm *MonitorManager) createAndConfigureNewMonitor(config config.MonitorCustomConfig, endpoint services.Endpoint) error {
 	id := types.MonitorID(mm.idGenerator())
+	monitorType := config.MonitorConfigCore().Type
+	//add := config.MonitorConfigCore().AdditionalMetrics
 
 	log.WithFields(log.Fields{
-		"monitorType":   config.MonitorConfigCore().Type,
+		"monitorType":   monitorType,
 		"discoveryRule": config.MonitorConfigCore().DiscoveryRule,
 		"monitorID":     id,
 	}).Info("Creating new monitor")
 
 	instance := newMonitor(config.MonitorConfigCore().Type, id)
 	if instance == nil {
-		return errors.Errorf("Could not create new monitor of type %s", config.MonitorConfigCore().Type)
+		return errors.Errorf("Could not create new monitor of type %s", monitorType)
 	}
+
+	//metadata, ok := MonitorMetadatas[monitorType]
+	//if !ok {
+	//	return errors.Errorf("Could not find monitor metadata of type %s", monitorType)
+	//}
 
 	configHash := config.MonitorConfigCore().Hash()
 
+	// Build additionalMetricsFilter.
+
 	output := &monitorOutput{
-		monitorType:               config.MonitorConfigCore().Type,
+		monitorType:               monitorType,
 		monitorID:                 id,
 		notHostSpecific:           config.MonitorConfigCore().DisableHostDimensions,
 		disableEndpointDimensions: config.MonitorConfigCore().DisableEndpointDimensions,
-		filter:                    config.MonitorConfigCore().Filter,
+		filter:                    nil,
 		configHash:                configHash,
 		endpoint:                  endpoint,
 		dpChan:                    mm.DPs,

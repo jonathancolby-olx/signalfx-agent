@@ -22,6 +22,8 @@ var MonitorFactories = map[string]MonitorFactory{}
 // for a particular monitor type.
 var ConfigTemplates = map[string]config.MonitorCustomConfig{}
 
+var MonitorMetadatas = map[string]*Metadata{}
+
 // InjectableMonitor should be implemented by a dynamic monitor that needs to
 // know when services are added and removed.
 type InjectableMonitor interface {
@@ -29,16 +31,41 @@ type InjectableMonitor interface {
 	RemoveService(services.Endpoint)
 }
 
+type Metadata struct {
+	MonitorType     string
+	SendAll         bool
+	IncludedMetrics map[string]bool
+	Metrics         map[string]bool
+	Groups          map[string]bool
+	GroupMetricsMap map[string][]string
+}
+
+//func (metadata *Metadata) HasMetric(metric string) bool {
+//	_, ok := metadata.Metrics[metric]
+//	return ok
+//}
+//
+//func (metadata *Metadata) HasGroup(group string) bool {
+//	_, ok := metadata.Groups[group]
+//	return ok
+//}
+
+func Register(_type string, factory MonitorFactory, configTemplate config.MonitorCustomConfig) {
+	// TODO: migrate everything
+	RegisterWithMetadata(&Metadata{MonitorType: _type}, factory, configTemplate)
+}
+
 // Register a new monitor type with the agent.  This is intended to be called
 // from the init function of the module of a specific monitor
 // implementation. configTemplate should be a zero-valued struct that is of the
 // same type as the parameter to the Configure method for this monitor type.
-func Register(_type string, factory MonitorFactory, configTemplate config.MonitorCustomConfig) {
-	if _, ok := MonitorFactories[_type]; ok {
-		panic("Monitor type '" + _type + "' already registered")
+func RegisterWithMetadata(metadata *Metadata, factory MonitorFactory, configTemplate config.MonitorCustomConfig) {
+	if _, ok := MonitorFactories[metadata.MonitorType]; ok {
+		panic("Monitor type '" + metadata.MonitorType + "' already registered")
 	}
-	MonitorFactories[_type] = factory
-	ConfigTemplates[_type] = configTemplate
+	MonitorFactories[metadata.MonitorType] = factory
+	ConfigTemplates[metadata.MonitorType] = configTemplate
+	MonitorMetadatas[metadata.MonitorType] = metadata
 }
 
 // DeregisterAll unregisters all monitor types.  Primarily intended for testing

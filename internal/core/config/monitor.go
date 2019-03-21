@@ -9,6 +9,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type AdditionalMetric struct {
+	MetricName string `yaml:"metricName"`
+	Group      string `yaml:"group"`
+}
+
 // MonitorConfig is used to configure monitor instances.  One instance of
 // MonitorConfig may be used to configure multiple monitor instances.  If a
 // monitor's discovery rule does not match any discovered services, the monitor
@@ -51,6 +56,8 @@ type MonitorConfig struct {
 	// is useful when you have an endpoint whose identity is not particularly
 	// important since it acts largely as a proxy or adapter for other metrics.
 	DisableEndpointDimensions bool `yaml:"disableEndpointDimensions" json:"disableEndpointDimensions"`
+	// Additional metrics to enable besides the default included ones. TODO: doc
+	AdditionalMetrics []AdditionalMetric
 	// OtherConfig is everything else that is custom to a particular monitor
 	OtherConfig map[string]interface{} `yaml:",inline" neverLog:"omit"`
 	// ValidationError is where a message concerning validation issues can go
@@ -68,10 +75,12 @@ var _ CustomConfigurable = &MonitorConfig{}
 // deserialization.
 func (mc *MonitorConfig) initialize() error {
 	var err error
+
 	mc.Filter, err = makeFilterSet(mc.MetricsToExclude, nil)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
