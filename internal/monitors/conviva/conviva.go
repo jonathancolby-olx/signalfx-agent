@@ -67,6 +67,7 @@ const monitorType = "conviva"
 //      metricLensDimensions:
 //        - Cities
 //    - metricParameter: avg_bitrate
+//      maxFiltersPerRequest: 99
 //      filters:
 //        - _ALL_
 //    - metricParameter: concurrent_plays
@@ -80,7 +81,9 @@ const monitorType = "conviva"
 // ```
 //
 // Add the extra dimension metric_source as shown in sample configuration below for the convenience of searching
-// for your metrics in SignalFx using the metric_source value you specify.
+// for your metrics in SignalFx using the metric_source value you specify. Also, version 2.4 of the Conviva Experience
+// Insights REST APIs limits the number of filters per request to 99. Specify the maximum number of filters per request
+// using `maxFiltersPerRequest` as shown in the example above in order to limit the number of filters per request.
 //
 // ```
 //monitors:
@@ -161,33 +164,52 @@ func (m *Monitor) Shutdown() {
 func (m *Monitor) fetchMetrics(contextTimeout time.Duration, semaphore chan struct{}, metricConf *metricConfig) {
 	select {
 	case semaphore <- struct{}{}:
-		go func(contextTimeout time.Duration, m *Monitor, url string) {
+		go func(contextTimeout time.Duration, m *Monitor,  metricConf *metricConfig) {
 			defer func() { <-semaphore }()
 			ctx, cancel := context.WithTimeout(m.ctx, contextTimeout)
 			defer cancel()
-			var res map[string]metricResponse
-			if _, err := m.client.get(ctx, &res, url); err != nil {
-				logger.Errorf("GET metric %s failed. %+v", metricConf.MetricParameter, err)
-				return
+			numFiltersPerRequest := len(metricConf.filterIDs())
+			if metricConf.MaxFiltersPerRequest != 0 {
+				numFiltersPerRequest = metricConf.MaxFiltersPerRequest
+			}
+			var urls []*string
+			low, high, numFilters := 0, 0, len(metricConf.filterIDs())
+			for i := 1; high < numFilters; i++ {
+				if low, high = (i-1)*numFiltersPerRequest, i*numFiltersPerRequest; high > numFilters {
+					high = numFilters
+				}
+				url := fmt.Sprintf(metricURLFormat, metricConf.MetricParameter, metricConf.accountID, strings.Join(metricConf.filterIDs()[low:high], ","))
+				urls = append(urls, &url)
+			}
+			var responses []*map[string]metricResponse
+			for _, url := range urls {
+				res := map[string]metricResponse{}
+				if _, err := m.client.get(ctx, &res, *url); err != nil {
+					logger.Errorf("GET metric %s failed. %+v", metricConf.MetricParameter, err)
+					return
+				}
+				responses = append(responses, &res)
 			}
 			var dps []*datapoint.Datapoint
 			timestamp := time.Now()
-			for metricParameter, series := range res {
-				metricConf.logFilterStatuses(series.Meta.FiltersWarmup, series.Meta.FiltersNotExist, series.Meta.FiltersIncompleteData)
-				metricName := "conviva." + metricParameter
-				for filterID, metricValues := range series.FilterIDValuesMap {
-					switch series.Type {
-					case "time_series":
-						dps = timeSeriesDatapoints(metricName, metricValues, series.Timestamps, metricConf.Account, metricConf.filterName(filterID))
-					case "label_series":
-						dps = labelSeriesDatapoints(metricName, metricValues, series.Xvalues, timestamp, metricConf.Account, metricConf.filterName(filterID))
-					default:
-						dps = simpleSeriesDatapoints(metricName, metricValues, timestamp, metricConf.Account, metricConf.filterName(filterID))
+			for _, res := range responses {
+				for metricParameter, series := range *res {
+					metricConf.logFilterStatuses(series.Meta.FiltersWarmup, series.Meta.FiltersNotExist, series.Meta.FiltersIncompleteData)
+					metricName := "conviva." + metricParameter
+					for filterID, metricValues := range series.FilterIDValuesMap {
+						switch series.Type {
+						case "time_series":
+							dps = append(dps, timeSeriesDatapoints(metricName, metricValues, series.Timestamps, metricConf.Account, metricConf.filterName(filterID))...)
+						case "label_series":
+							dps = append(dps, labelSeriesDatapoints(metricName, metricValues, series.Xvalues, timestamp, metricConf.Account, metricConf.filterName(filterID))...)
+						default:
+							dps = append(dps, simpleSeriesDatapoints(metricName, metricValues, timestamp, metricConf.Account, metricConf.filterName(filterID))...)
+						}
 					}
-					m.sendDatapoints(dps)
 				}
 			}
-		}(contextTimeout, m, fmt.Sprintf(metricURLFormat, metricConf.MetricParameter, metricConf.accountID, strings.Join(metricConf.filterIDs(), ",")))
+			m.sendDatapoints(dps)
+		}(contextTimeout, m, metricConf)
 	}
 }
 
@@ -201,25 +223,44 @@ func (m *Monitor) fetchMetricLensMetrics(contextTimeout time.Duration, semaphore
 				logger.Errorf("No id for MetricLens dimension %s. Wrong MetricLens dimension name.", dim)
 				continue
 			}
-			go func(contextTimeout time.Duration, m *Monitor, metricConf *metricConfig, metricLensDimension string, url string) {
+			go func(contextTimeout time.Duration, m *Monitor, metricConf *metricConfig, metricLensDimension string) {
 				defer func() { <-semaphore }()
 				ctx, cancel := context.WithTimeout(m.ctx, contextTimeout)
 				defer cancel()
-				var res map[string]metricResponse
-				if _, err := m.client.get(ctx, &res, url); err != nil {
-					logger.Errorf("GET metric %s failed. %+v", metricConf.MetricParameter, err)
-					return
+				numFiltersPerRequest := len(metricConf.filterIDs())
+				if metricConf.MaxFiltersPerRequest != 0 {
+					numFiltersPerRequest = metricConf.MaxFiltersPerRequest
+				}
+				var urls []*string
+				low, high, numFilters := 0, 0, len(metricConf.filterIDs())
+				for i := 1; high < numFilters; i++ {
+					if low, high = (i-1)*numFiltersPerRequest, i*numFiltersPerRequest; high > numFilters {
+						high = numFilters
+					}
+					url := fmt.Sprintf(metricLensURLFormat, metricConf.MetricParameter, metricConf.accountID, strings.Join(metricConf.filterIDs()[low:high], ","), int(dimID))
+					urls = append(urls, &url)
+				}
+				var responses []*map[string]metricResponse
+				for _, url := range urls {
+					var res map[string]metricResponse
+					if _, err := m.client.get(ctx, &res, *url); err != nil {
+						logger.Errorf("GET metric %s failed. %+v", metricConf.MetricParameter, err)
+						return
+					}
+					responses = append(responses, &res)
 				}
 				var dps []*datapoint.Datapoint
 				timestamp := time.Now()
-				for metricParameter, metricTable := range res {
-					metricConf.logFilterStatuses(metricTable.Meta.FiltersWarmup, metricTable.Meta.FiltersNotExist, metricTable.Meta.FiltersIncompleteData)
-					for filterID, tableValue := range metricTable.Tables {
-						dps = tableDatapoints(metricLensMetrics[metricParameter], metricLensDimension, tableValue.Rows, metricTable.Xvalues, timestamp, metricConf.Account, metricConf.filterName(filterID))
-						m.sendDatapoints(dps)
+				for _, res := range responses {
+					for metricParameter, metricTable := range *res {
+						metricConf.logFilterStatuses(metricTable.Meta.FiltersWarmup, metricTable.Meta.FiltersNotExist, metricTable.Meta.FiltersIncompleteData)
+						for filterID, tableValue := range metricTable.Tables {
+							dps = append(dps, tableDatapoints(metricLensMetrics[metricParameter], metricLensDimension, tableValue.Rows, metricTable.Xvalues, timestamp, metricConf.Account, metricConf.filterName(filterID))...)
+						}
 					}
 				}
-			}(contextTimeout, m, metricConf, dim, fmt.Sprintf(metricLensURLFormat, metricConf.MetricParameter, metricConf.accountID, strings.Join(metricConf.filterIDs(), ","), int(dimID)))
+				m.sendDatapoints(dps)
+			}(contextTimeout, m, metricConf, dim)
 		}
 	}
 }
