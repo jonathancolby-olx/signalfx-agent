@@ -12,12 +12,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/signalfx/signalfx-agent/internal/core/common/constants"
 	"github.com/signalfx/signalfx-agent/internal/core/config"
 	"github.com/signalfx/signalfx-agent/internal/utils"
 	log "github.com/sirupsen/logrus"
@@ -83,10 +81,8 @@ func (mc *MonitorCore) run(messages *messageReadWriter, stdin io.Reader, stdout 
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 
-	// The PYTHON_HOME envvar is set in agent core when config is processed.
+	// The PYTHONHOME envvar is set in agent core when config is processed.
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env,
-		fmt.Sprintf("LD_LIBRARY_PATH=%s", filepath.Join(os.Getenv(constants.BundleDirEnvVar), "lib")))
 
 	// Stderr is just the normal output from the Python code that isn't
 	// specially encoded

@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# The interpreter on all binary files will be set to the bundled interpreter.
+
+# Any depenencies of this script should be included in the bundle and set up
+# properly first in patch-binaries-init so that they can be run in any Linux
+# environment.
+
+set -eu
+
+root=${1}
+interpreter="${root%/}/bin/ld-linux.so"
+
+echo "Setting interpreter on ${root%/}/bin/* to $interpreter"
+
+cd $root
+
+for f in ${root%/}/bin/*; do
+  ${root%/}/bin/patchelf --set-interpreter $interpreter $f 2>/dev/null || true
+done

@@ -186,6 +186,7 @@ func (c *Config) setupEnvironment() {
 	} else {
 		os.Setenv("PYTHONHOME", c.BundleDir)
 	}
+
 	// set the environment variables for gopsutil based on configured values
 	os.Setenv(hostfs.HostProcVar, c.ProcPath)
 	os.Setenv(hostfs.HostEtcVar, c.EtcPath)
